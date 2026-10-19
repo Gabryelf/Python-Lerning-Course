@@ -4,7 +4,7 @@
 
 [![Tkinter](https://img.shields.io/badge/Tkinter%20-CC2927?style=for-the-badge&logo=microsoftsqlserver&logoColor=white)](https://www.microsoft.com/sql-server)
 [![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![License](https://img.shields.io/badge/version-0.1.0-green?style=for-the-badge)](#)
+[![License](https://img.shields.io/badge/OOP-green?style=for-the-badge)](#)
 
  **🔹 Урок 11 — Основы объектно ориентированного программирования**
 
