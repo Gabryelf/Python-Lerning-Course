@@ -67,6 +67,6 @@
 <br/>
 
 ![deadline](https://img.shields.io/badge/дедлайн-__09.11.26___-6b7280?style=flat-square)
-![format](https://img.shields.io/badge/формат-zip%20%2B%20README-4f46e5?style=flat-square)
+![format](https://img.shields.io/badge/формат-app%20%2B%20README-4f46e5?style=flat-square)
 
 </div>
