@@ -1,41 +1,44 @@
-import os
-from flask import Flask
+import sqlite3
+from datetime import datetime
+
+import click
+from flask import current_app, g
 
 
-def create_app(test_config=None):
-    app = Flask(__name__, instance_relative_config=True)
+def get_db():
+    if 'db' not in g:
+        g.db = sqlite3.connect(
+            current_app.config['DATABASE'],
+            detect_types=sqlite3.PARSE_DECLTYPES,
+        )
+        g.db.row_factory = sqlite3.Row
+    return g.db
 
-    # на Netrun базу храним в постоянной папке /data
-    if os.path.isdir('/data'):
-        database = os.path.join('/data', 'flaskr.sqlite')
-    else:
-        database = os.path.join(app.instance_path, 'flaskr.sqlite')
 
-    app.config.from_mapping(
-        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
-        DATABASE=database,
-    )
+def close_db(e=None):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
 
-    if test_config is None:
-        app.config.from_pyfile('config.py', silent=True)
-    else:
-        app.config.from_mapping(test_config)
 
-    os.makedirs(app.instance_path, exist_ok=True)
+def init_db():
+    db = get_db()
+    with current_app.open_resource('schema.sql') as f:
+        db.executescript(f.read().decode('utf8'))
 
-    from . import db
-    db.init_app(app)
 
-    with app.app_context():
-        # создаём таблицы только если базы ещё нет
-        if not os.path.exists(app.config['DATABASE']):
-            db.init_db()
+@click.command('init-db')
+def init_db_command():
+    """Очистить данные и создать таблицы заново."""
+    init_db()
+    click.echo('Initialized the database.')
 
-    from . import auth
-    app.register_blueprint(auth.bp)
 
-    from . import blog
-    app.register_blueprint(blog.bp)
-    app.add_url_rule('/', endpoint='index')
+sqlite3.register_converter(
+    'timestamp', lambda v: datetime.fromisoformat(v.decode())
+)
 
-    return app
+
+def init_app(app):
+    app.teardown_appcontext(close_db)
+    app.cli.add_command(init_db_command)
