@@ -1,44 +1,41 @@
-import sqlite3
-from datetime import datetime
-
-import click
-from flask import current_app, g
+import os
+from flask import Flask
 
 
-def get_db():
-    if 'db' not in g:
-        g.db = sqlite3.connect(
-            current_app.config['DATABASE'],
-            detect_types=sqlite3.PARSE_DECLTYPES,
-        )
-        g.db.row_factory = sqlite3.Row
-    return g.db
+def create_app(test_config=None):
+    app = Flask(__name__, instance_relative_config=True)
 
+    # на Netrun базу храним в постоянной папке /data
+    if os.path.isdir('/data'):
+        database = os.path.join('/data', 'flaskr.sqlite')
+    else:
+        database = os.path.join(app.instance_path, 'flaskr.sqlite')
 
-def close_db(e=None):
-    db = g.pop('db', None)
-    if db is not None:
-        db.close()
+    app.config.from_mapping(
+        SECRET_KEY=os.environ.get('SECRET_KEY', 'dev'),
+        DATABASE=database,
+    )
 
+    if test_config is None:
+        app.config.from_pyfile('config.py', silent=True)
+    else:
+        app.config.from_mapping(test_config)
 
-def init_db():
-    db = get_db()
-    with current_app.open_resource('schema.sql') as f:
-        db.executescript(f.read().decode('utf8'))
+    os.makedirs(app.instance_path, exist_ok=True)
 
+    from . import db
+    db.init_app(app)
 
-@click.command('init-db')
-def init_db_command():
-    """Очистить данные и создать таблицы заново."""
-    init_db()
-    click.echo('Initialized the database.')
+    with app.app_context():
+        # создаём таблицы только если базы ещё нет
+        if not os.path.exists(app.config['DATABASE']):
+            db.init_db()
 
+    from . import auth
+    app.register_blueprint(auth.bp)
 
-sqlite3.register_converter(
-    'timestamp', lambda v: datetime.fromisoformat(v.decode())
-)
+    from . import blog
+    app.register_blueprint(blog.bp)
+    app.add_url_rule('/', endpoint='index')
 
-
-def init_app(app):
-    app.teardown_appcontext(close_db)
-    app.cli.add_command(init_db_command)
+    return app
